@@ -17,6 +17,7 @@
     
     <!-- 아이콘 팩 (FontAwesome) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         :root {
@@ -683,6 +684,61 @@
             </div>
         </div>
 
+        <!-- RAG 뉴스 감성 & 실시간 수급 지표 카드 -->
+        <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 40ms; text-align: left;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-brain" style="color: var(--color-primary); margin-right: 6px;"></i> 실시간 AI 시장 감성 & 수급</span>
+                <span id="sentiment-time" style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;"></span>
+            </h3>
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
+                    <span style="color: var(--text-muted);">뉴스 감성 지수</span>
+                    <span id="sentiment-score-badge" style="font-weight: 800; color: var(--color-primary);">0 (Neutral)</span>
+                </div>
+                <div style="height: 10px; background: rgba(255,255,255,0.08); border-radius: 5px; overflow: hidden; position: relative;">
+                    <div id="sentiment-gauge-bar" style="width: 50%; height: 100%; background: linear-gradient(90deg, var(--color-danger), var(--color-primary), var(--color-success)); transition: all 0.5s ease; border-radius: 5px;"></div>
+                </div>
+                <div id="sentiment-reason" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; line-height: 1.45; background: rgba(255,255,255,0.02); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                    수집된 경제 뉴스 요약 분석 중...
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; text-align: center;">
+                <div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px;">김치프리미엄</div>
+                    <div id="ind-kimp" style="font-size: 0.88rem; font-weight: 700; font-family: var(--font-mono); color: var(--color-success);">0.00%</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px;">Fear & Greed</div>
+                    <div id="ind-fear-greed" style="font-size: 0.88rem; font-weight: 700; font-family: var(--font-mono); color: var(--color-primary);">50</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 4px;">원/달러 환율</div>
+                    <div id="ind-exchange" style="font-size: 0.88rem; font-weight: 700; font-family: var(--font-mono);">1,380원</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 포트폴리오 자산 배분 분석 카드 -->
+        <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 80ms; text-align: left;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 14px;">
+                <i class="fa-solid fa-chart-pie" style="color: var(--color-primary); margin-right: 6px;"></i> 포트폴리오 비중 비교
+            </h3>
+            <div style="display: flex; gap: 15px; align-items: center; justify-content: center; height: 180px; position: relative; margin-bottom: 10px;">
+                <div style="width: 48%; height: 100%; position: relative;">
+                    <canvas id="current-weight-chart" style="max-height: 100%; max-width: 100%;"></canvas>
+                    <div style="position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); font-size: 0.7rem; font-weight: bold; color: var(--text-muted); text-align: center; pointer-events: none;">내 비중</div>
+                </div>
+                <div style="width: 48%; height: 100%; position: relative;">
+                    <canvas id="optimal-weight-chart" style="max-height: 100%; max-width: 100%;"></canvas>
+                    <div style="position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); font-size: 0.7rem; font-weight: bold; color: var(--color-primary); text-align: center; pointer-events: none;">AI 최적</div>
+                </div>
+            </div>
+            <div id="opt-stats-desc" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 10px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; line-height: 1.4;">
+                M5 가속 평균-분산 최적 자산 배분 비율 분석 중...
+            </div>
+        </div>
+
         <!-- 보유 포지션 섹션 -->
         <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 60ms;">
             <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
@@ -693,6 +749,18 @@
                 <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem;">보유 중인 포지션이 없습니다.</div>
             </div>
         </div>
+
+        <!-- 실시간 진입 임박 TOP 5 스캐너 -->
+        <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 90ms; text-align: left;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-tower-broadcast" style="color: var(--color-primary); margin-right: 6px;"></i> 진입 임박 TOP 5 스캐너</span>
+                <span style="font-size: 0.72rem; color: var(--color-success); font-weight: bold;"><i class="fa-solid fa-circle-play" class="pulse-glow"></i> LIVE</span>
+            </h3>
+            <div id="watchlist-container" style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="text-align: center; padding: 15px; color: var(--text-muted); font-size: 0.8rem;">진입 임박 데이터 분석 대기 중...</div>
+            </div>
+        </div>
+
 
         <!-- 실시간 감시 레이더 섹션 -->
         <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 100ms;">
@@ -988,6 +1056,9 @@
             }
         }
 
+        let currentChart = null;
+        let optimalChart = null;
+
         async function fetchData() {
             const statusData = await apiRequest('/api/status');
             if (statusData) {
@@ -1008,7 +1079,29 @@
             if (trades) {
                 updateTradesUI(trades);
             }
+
+            // 고도화 실시간 연동 추가
+            const sentiment = await apiRequest('/api/sentiment/latest');
+            if (sentiment) {
+                updateSentimentUI(sentiment);
+            }
+
+            const indicators = await apiRequest('/api/indicators');
+            if (indicators) {
+                updateIndicatorsUI(indicators);
+            }
+
+            const optData = await apiRequest('/api/portfolio/optimal');
+            if (optData) {
+                updateOptimalPortfolioUI(optData);
+            }
+
+            const watchlist = await apiRequest('/api/watchlist');
+            if (watchlist) {
+                updateWatchlistUI(watchlist);
+            }
         }
+
 
         function updateStatusUI(data) {
             // 엔진 하트비트 갱신
@@ -1175,6 +1268,168 @@
             
             document.getElementById('total-pnl-val').innerText = `${totalSign}${totalPnl.toLocaleString('ko-KR', {maximumFractionDigits:0})}원 (${totalSign}${totalPnlPct.toFixed(2)}%)`;
             document.getElementById('total-pnl-val').className = totalPnlClass;
+        }
+
+        function updateSentimentUI(data) {
+            const score = data.score || 0;
+            const reason = data.reason || "시장 분석 정보가 아직 준비되지 않았습니다.";
+            const ts = data.timestamp ? data.timestamp.replace('T', ' ').substring(11, 16) : '';
+            
+            let statusText = "Neutral (중립)";
+            let badgeColor = "var(--text-muted)";
+            if (score <= -70) {
+                statusText = `Extreme Fear (공포: ${score})`;
+                badgeColor = "var(--color-danger)";
+            } else if (score < -20) {
+                statusText = `Fear (불안: ${score})`;
+                badgeColor = "hsl(18, 92%, 50%)";
+            } else if (score >= 70) {
+                statusText = `Extreme Greed (탐욕: ${score})`;
+                badgeColor = "var(--color-success)";
+            } else if (score > 20) {
+                statusText = `Greed (호조: ${score})`;
+                badgeColor = "hsl(140, 84%, 39%)";
+            } else {
+                statusText = `Neutral (중립: ${score})`;
+                badgeColor = "var(--color-primary)";
+            }
+            
+            document.getElementById('sentiment-score-badge').innerText = statusText;
+            document.getElementById('sentiment-score-badge').style.color = badgeColor;
+            document.getElementById('sentiment-reason').innerText = reason;
+            document.getElementById('sentiment-time').innerText = ts ? `${ts} 분석` : "";
+            
+            const gaugePct = ((score + 100) / 200) * 100;
+            document.getElementById('sentiment-gauge-bar').style.width = `${gaugePct}%`;
+        }
+
+        function updateIndicatorsUI(data) {
+            const ind = data.indicators || {};
+            const kimp = ind.kimp !== undefined ? ind.kimp : (ind.binance_basis !== undefined ? ind.binance_basis : 0.0);
+            const kimpEl = document.getElementById('ind-kimp');
+            kimpEl.innerText = `${kimp >= 0 ? '+' : ''}${kimp.toFixed(2)}%`;
+            kimpEl.className = kimp >= 0 ? 'text-up' : 'text-down';
+            
+            const fg = ind.fear_greed !== undefined ? ind.fear_greed : 50;
+            document.getElementById('ind-fear-greed').innerText = fg;
+            
+            const usd = ind.usd_krw !== undefined ? ind.usd_krw : 1380.0;
+            document.getElementById('ind-exchange').innerText = `${Math.round(usd).toLocaleString('ko-KR')}원`;
+        }
+
+        function updateWatchlistUI(data) {
+            const container = document.getElementById('watchlist-container');
+            const list = data.watchlist || [];
+            if (list.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 15px; color: var(--text-muted); font-size: 0.8rem;">분석 범위 내 수급 자산이 없습니다.</div>';
+                return;
+            }
+            
+            let html = '';
+            list.forEach((w, idx) => {
+                html += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03);" class="stagger-item" style="animation-delay:${idx * 30}ms;">
+                        <div style="display:flex; flex-direction:column; text-align:left;">
+                            <span style="font-size:0.85rem; font-weight:700;">${w.korean_name} <span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-mono);">${w.market.replace('KRW-', '')}</span></span>
+                            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">RSI: ${w.rsi.toFixed(0)} · OBI: ${w.imbalance_ratio.toFixed(1)}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="text-align:right;">
+                                <div style="font-size:0.85rem; font-family:var(--font-mono); font-weight:600;">${w.price.toLocaleString('ko-KR')}원</div>
+                                <div style="font-size:0.7rem; font-weight:bold; color:var(--color-primary);">수급 ${w.entry_score}점</div>
+                            </div>
+                            <button class="btn-small-action" style="padding:5px 9px; font-size:0.72rem;" onclick="lockCoin('${w.market}')">락</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function getColorForAsset(asset) {
+            const colors = {
+                'KRW': 'hsla(222, 20%, 40%, 0.45)',
+                'BTC': 'rgba(247, 147, 26, 0.75)',
+                'ETH': 'rgba(141, 144, 213, 0.75)',
+                'XRP': 'rgba(45, 170, 225, 0.75)',
+                'SOL': 'rgba(20, 241, 149, 0.75)',
+                'DOGE': 'rgba(194, 160, 46, 0.75)'
+            };
+            return colors[asset] || 'rgba(139, 92, 246, 0.75)';
+        }
+
+        function updateOptimalPortfolioUI(data) {
+            if (data.status !== "success") return;
+            
+            const optimal = data.optimal || {};
+            const current = data.current_weights || {};
+            
+            const curLabels = Object.keys(current);
+            const curValues = Object.values(current);
+            const curColors = curLabels.map(getColorForAsset);
+            
+            if (currentChart) currentChart.destroy();
+            const ctxCur = document.getElementById('current-weight-chart').getContext('2d');
+            currentChart = new Chart(ctxCur, {
+                type: 'doughnut',
+                data: {
+                    labels: curLabels,
+                    datasets: [{
+                        data: curValues,
+                        backgroundColor: curColors,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.05)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    cutout: '65%'
+                }
+            });
+            
+            const optAllocation = optimal.max_sharpe_weights || {};
+            const optLabels = Object.keys(optAllocation);
+            const optValues = Object.values(optAllocation).map(v => v * 100);
+            const optColors = optLabels.map(getColorForAsset);
+            
+            if (optimalChart) optimalChart.destroy();
+            
+            if (optLabels.length > 0) {
+                const ctxOpt = document.getElementById('optimal-weight-chart').getContext('2d');
+                optimalChart = new Chart(ctxOpt, {
+                    type: 'doughnut',
+                    data: {
+                        labels: optLabels,
+                        datasets: [{
+                            data: optValues,
+                            backgroundColor: optColors,
+                            borderWidth: 1,
+                            borderColor: 'rgba(255,255,255,0.05)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        cutout: '65%'
+                    }
+                });
+                
+                const expRet = optimal.expected_return !== undefined ? optimal.expected_return * 100 : 0.0;
+                const expVol = optimal.expected_volatility !== undefined ? optimal.expected_volatility * 100 : 0.0;
+                document.getElementById('opt-stats-desc').innerHTML = 
+                    `💡 <b>M5 AI 최적 포트폴리오 샤프비율 지향점:</b><br/>` +
+                    `예상 수익률: <span style="color:var(--color-success);font-weight:700;">+${expRet.toFixed(1)}%</span> · ` +
+                    `예상 변동성: <span style="color:var(--color-danger);font-weight:700;">${expVol.toFixed(1)}%</span>`;
+            } else {
+                document.getElementById('opt-stats-desc').innerText = "최적 자산 배분 비중 연산 대기 중...";
+            }
         }
 
         function updateRadarUI(list) {
