@@ -828,6 +828,35 @@
         </div>
     </div>
 
+    <!-- 탭 4: AI 비서 -->
+    <div id="tab-ai" class="tab-content">
+        <div class="glass-card stagger-item" style="animation-delay: 20ms; display: flex; flex-direction: column; height: calc(100vh - 200px); max-height: 550px;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px; flex-shrink: 0; text-align: left;">
+                <i class="fa-solid fa-robot" style="color: var(--color-primary); margin-right: 6px;"></i> AI 음성 비서
+            </h3>
+            <div id="chat-messages" style="flex-grow: 1; overflow-y: auto; text-align: left; padding: 8px; display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px; -webkit-overflow-scrolling: touch;">
+                <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px 12px 12px 0; max-width: 85%; align-self: flex-start;">
+                    반갑습니다! 저는 코인 헌터 AI 비서입니다. 🎙️ 마이크 버튼을 누르고 음성으로 명령하시거나 메시지를 보내주세요.
+                    <br/><br/>
+                    💡 <b>사용 가능한 명령 예시:</b>
+                    <br/>• "현재 봇 상태 요약해줘"
+                    <br/>• "비트코인 락 설정해줘"
+                    <br/>• "도지코인 락 해제해"
+                    <br/>• "오늘 수익 얼마야?"
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
+                <button id="mic-btn" onclick="toggleSpeech()" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); color: var(--color-primary); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0;">
+                    <i id="mic-icon" class="fa-solid fa-microphone" style="font-size: 1.1rem;"></i>
+                </button>
+                <input type="text" id="chat-input" placeholder="명령어를 입력하세요..." onkeypress="handleChatKey(event)" style="flex-grow: 1; padding: 12px; border-radius: 20px; border: 1px solid var(--card-border); background: rgba(255, 255, 255, 0.03); color: var(--text-main); font-size: 0.88rem; outline: none; width: 10px;">
+                <button onclick="sendChatMessage()" style="background: var(--color-primary); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px var(--primary-glow); flex-shrink: 0;">
+                    <i class="fa-solid fa-paper-plane" style="font-size: 0.95rem;"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 하단 네비게이션 탭 바 -->
     <div class="nav-bar">
         <div class="nav-item active" onclick="switchTab('dash', this)">
@@ -841,6 +870,10 @@
         <div class="nav-item" onclick="switchTab('logs', this)">
             <i class="fa-solid fa-clock-rotate-left"></i>
             <span>체결로그</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('ai', this)">
+            <i class="fa-solid fa-robot"></i>
+            <span>AI 비서</span>
         </div>
     </div>
 
@@ -1432,6 +1465,112 @@
             } else {
                 alert("API 주소와 토큰을 모두 입력해야 합니다.");
             }
+        }
+
+        // =====================================================================
+        // 🎙️ AI 비서 음성/텍스트 연동 스크립트 (마일스톤 1)
+        // =====================================================================
+        let recognition = null;
+        let isRecognizing = false;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRec();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'ko-KR';
+
+            recognition.onstart = () => {
+                isRecognizing = true;
+                const micBtn = document.getElementById('mic-btn');
+                const micIcon = document.getElementById('mic-icon');
+                micBtn.style.background = 'rgba(239, 68, 68, 0.15)';
+                micBtn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                micIcon.style.color = 'var(--color-danger)';
+                showToast("음성을 듣고 있습니다...");
+            };
+
+            recognition.onend = () => {
+                isRecognizing = false;
+                const micBtn = document.getElementById('mic-btn');
+                const micIcon = document.getElementById('mic-icon');
+                micBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+                micBtn.style.borderColor = 'var(--card-border)';
+                micIcon.style.color = 'var(--color-primary)';
+            };
+
+            recognition.onresult = (event) => {
+                const text = event.results[0][0].transcript;
+                document.getElementById('chat-input').value = text;
+                sendChatMessage();
+            };
+
+            recognition.onerror = (event) => {
+                console.error("음성 인식 오류:", event.error);
+                showToast("음성 인식 오류: " + event.error);
+            };
+        }
+
+        function toggleSpeech() {
+            if (!recognition) {
+                alert("이 브라우저 혹은 환경은 음성 인식을 지원하지 않습니다. 텍스트 입력을 사용해 주세요.");
+                return;
+            }
+            if (isRecognizing) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+
+        function handleChatKey(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        async function sendChatMessage() {
+            const inputEl = document.getElementById('chat-input');
+            const text = inputEl.value.trim();
+            if (!text) return;
+
+            inputEl.value = '';
+            appendChatMessage('user', text);
+
+            const res = await apiRequest('/api/nlu', {
+                method: 'POST',
+                body: JSON.stringify({ text: text })
+            });
+
+            if (res) {
+                appendChatMessage('ai', res.message);
+            } else {
+                appendChatMessage('ai', "⚠️ API 응답 수신에 실패했습니다. 연결 설정을 다시 확인해 주세요.");
+            }
+        }
+
+        function appendChatMessage(sender, message) {
+            const container = document.getElementById('chat-messages');
+            const msgEl = document.createElement('div');
+            
+            if (sender === 'user') {
+                msgEl.style.background = 'var(--color-info)';
+                msgEl.style.color = 'white';
+                msgEl.style.padding = '10px';
+                msgEl.style.borderRadius = '12px 12px 0 12px';
+                msgEl.style.maxWidth = '85%';
+                msgEl.style.alignSelf = 'flex-end';
+            } else {
+                msgEl.style.background = 'rgba(255, 255, 255, 0.05)';
+                msgEl.style.padding = '10px';
+                msgEl.style.borderRadius = '12px 12px 12px 0';
+                msgEl.style.maxWidth = '85%';
+                msgEl.style.alignSelf = 'flex-start';
+            }
+            
+            msgEl.innerHTML = message.replace(/\n/g, '<br/>');
+            container.appendChild(msgEl);
+            container.scrollTop = container.scrollHeight;
         }
     </script>
 </body>
