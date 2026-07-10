@@ -1327,24 +1327,43 @@
             
             let html = '';
             list.forEach((w, idx) => {
+                const obi = w.imbalance_ratio || 1.0;
+                const buyPct = Math.min(95, Math.max(5, (obi / (obi + 1.0)) * 100));
+                const sellPct = 100 - buyPct;
+                
                 html += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03);" class="stagger-item" style="animation-delay:${idx * 30}ms;">
-                        <div style="display:flex; flex-direction:column; text-align:left;">
-                            <span style="font-size:0.85rem; font-weight:700;">${w.korean_name} <span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-mono);">${w.market.replace('KRW-', '')}</span></span>
-                            <span style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">RSI: ${w.rsi.toFixed(0)} · OBI: ${w.imbalance_ratio.toFixed(1)}</span>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="text-align:right;">
-                                <div style="font-size:0.85rem; font-family:var(--font-mono); font-weight:600;">${w.price.toLocaleString('ko-KR')}원</div>
-                                <div style="font-size:0.7rem; font-weight:bold; color:var(--color-primary);">수급 ${w.entry_score}점</div>
+                    <div style="display:flex; flex-direction:column; background:rgba(255,255,255,0.02); padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.03);" class="stagger-item" style="animation-delay:${idx * 30}ms;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; flex-direction:column; text-align:left;">
+                                <span style="font-size:0.88rem; font-weight:800;">${w.korean_name} <span style="font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono);">${w.market.replace('KRW-', '')}</span></span>
+                                <span style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">RSI: ${w.rsi.toFixed(0)} · OBI: ${obi.toFixed(1)}</span>
                             </div>
-                            <button class="btn-small-action" style="padding:5px 9px; font-size:0.72rem;" onclick="lockCoin('${w.market}')">락</button>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="text-align:right;">
+                                    <div style="font-size:0.88rem; font-family:var(--font-mono); font-weight:700;">${w.price.toLocaleString('ko-KR')}원</div>
+                                    <div style="font-size:0.72rem; font-weight:bold; color:var(--color-primary);">수급 ${w.entry_score}점</div>
+                                </div>
+                                <button class="btn-small-action" style="padding:6px 10px; font-size:0.75rem;" onclick="lockCoin('${w.market}')">락</button>
+                            </div>
+                        </div>
+                        
+                        <!-- OBI 실시간 가로형 수급 막대그래프 -->
+                        <div style="margin-top:10px; width:100%;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-muted); margin-bottom:4px; font-family:var(--font-mono);">
+                                <span style="color:var(--color-success); font-weight:bold;">🟢 매수세 ${buyPct.toFixed(0)}%</span>
+                                <span style="color:var(--color-danger); font-weight:bold;">🔴 매도세 ${sellPct.toFixed(0)}%</span>
+                            </div>
+                            <div style="display:flex; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                                <div style="width:${buyPct}%; background:linear-gradient(90deg, var(--color-success), hsl(160, 84%, 49%)); height:100%;"></div>
+                                <div style="width:${sellPct}%; background:linear-gradient(90deg, hsl(0, 84%, 50%), var(--color-danger)); height:100%;"></div>
+                            </div>
                         </div>
                     </div>
                 `;
             });
             container.innerHTML = html;
         }
+
 
         function getColorForAsset(asset) {
             const colors = {
@@ -1448,27 +1467,50 @@
                     badgeStyle = 'background:rgba(245,158,11,0.15);color:var(--color-primary);border:1px solid rgba(245,158,11,0.2);';
                 }
 
-                // RSI가 과열/과매도 일 때 경고 텍스트 색 변경
-                const rsiColor = r.rsi >= 70 ? 'var(--color-danger)' : (r.rsi <= 30 ? 'var(--color-info)' : 'var(--text-main)');
+                // RSI 과열/과매도 구간 네온 컬러 배지
+                let rsiBadgeHtml = `<span style="color:var(--text-main); font-weight:700;">${r.rsi.toFixed(1)}</span>`;
+                if (r.rsi >= 70) {
+                    rsiBadgeHtml = `<span style="background:rgba(239,68,68,0.18); color:var(--color-danger); border:1px solid rgba(239,68,68,0.3); padding:1px 5px; border-radius:4px; font-weight:700; box-shadow: 0 0 8px rgba(239,68,68,0.25);">${r.rsi.toFixed(1)} 🔥 과열</span>`;
+                } else if (r.rsi <= 30) {
+                    rsiBadgeHtml = `<span style="background:rgba(59,130,246,0.18); color:var(--color-info); border:1px solid rgba(59,130,246,0.3); padding:1px 5px; border-radius:4px; font-weight:700; box-shadow: 0 0 8px rgba(59,130,246,0.25);">${r.rsi.toFixed(1)} ❄️ 침체</span>`;
+                }
+
+                const obi = r.imbalance_ratio || 1.0;
+                const buyPct = Math.min(95, Math.max(5, (obi / (obi + 1.0)) * 100));
+                const sellPct = 100 - buyPct;
 
                 html += `
-                    <div class="radar-item stagger-item" style="animation-delay:${idx * 30}ms;">
-                        <div class="radar-name-box">
-                            <span class="radar-name">${r.korean_name} <span style="font-size:0.65rem;color:var(--text-muted);font-family:var(--font-mono);">${r.market.replace('KRW-', '')}</span></span>
-                            <span class="radar-badge" style="${badgeStyle}">${r.state}</span>
-                        </div>
-                        <div class="radar-right">
-                            <div class="radar-metrics">
-                                <div>현재가: ${r.price.toLocaleString('ko-KR')}원 (<span class="${r.change_rate >= 0 ? 'text-up' : 'text-down'}">${r.change_rate >= 0 ? '+' : ''}${r.change_rate.toFixed(2)}%</span>)</div>
-                                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">RSI: <span style="color: ${rsiColor}; font-weight:700;">${r.rsi.toFixed(1)}</span> · 체결강도: <span style="color:var(--text-main); font-weight:700;">${r.volume_power.toFixed(0)}%</span></div>
+                    <div class="radar-item stagger-item" style="animation-delay:${idx * 30}ms; display:flex; flex-direction:column; padding:12px; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                            <div class="radar-name-box" style="text-align:left;">
+                                <span class="radar-name" style="font-size:0.88rem; font-weight:800;">${r.korean_name} <span style="font-size:0.7rem;color:var(--text-muted);font-family:var(--font-mono);">${r.market.replace('KRW-', '')}</span></span>
+                                <span class="radar-badge" style="${badgeStyle}; font-size:0.68rem; padding:2px 6px; border-radius:4px;">${r.state}</span>
                             </div>
-                            <button class="btn-small-action" style="padding:4px 8px; font-size:0.7rem;" onclick="lockCoin('${r.market}')">락</button>
+                            <button class="btn-small-action" style="padding:5px 9px; font-size:0.72rem;" onclick="lockCoin('${r.market}')">락</button>
+                        </div>
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; font-size:0.75rem;">
+                            <div>현재가: <span style="font-family:var(--font-mono); font-weight:600;">${r.price.toLocaleString('ko-KR')}원</span> (<span class="${r.change_rate >= 0 ? 'text-up' : 'text-down'}">${r.change_rate >= 0 ? '+' : ''}${r.change_rate.toFixed(2)}%</span>)</div>
+                            <div style="color:var(--text-muted);">RSI: ${rsiBadgeHtml} · 체결: <span style="color:var(--text-main); font-weight:700;">${r.volume_power.toFixed(0)}%</span></div>
+                        </div>
+
+                        <!-- OBI 가로형 실시간 수급 막대그래프 -->
+                        <div style="width:100%;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.62rem; color:var(--text-muted); margin-bottom:4px; font-family:var(--font-mono);">
+                                <span style="color:var(--color-success); font-weight:bold;">🟢 매수 ${buyPct.toFixed(0)}%</span>
+                                <span style="color:var(--color-danger); font-weight:bold;">🔴 매도 ${sellPct.toFixed(0)}%</span>
+                            </div>
+                            <div style="display:flex; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden;">
+                                <div style="width:${buyPct}%; background:linear-gradient(90deg, var(--color-success), hsl(160, 84%, 49%)); height:100%;"></div>
+                                <div style="width:${sellPct}%; background:linear-gradient(90deg, hsl(0, 84%, 50%), var(--color-danger)); height:100%;"></div>
+                            </div>
                         </div>
                     </div>
                 `;
             });
             container.innerHTML = html;
         }
+
 
         function updateTradesUI(list) {
             const container = document.getElementById('trades-container');
