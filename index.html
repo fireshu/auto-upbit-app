@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>코인 헌터 모바일</title>
+    <!-- PWA 지원 meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="코인 헌터">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- 구글 웹폰트 (웨이트 최적화) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Space+Grotesk:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 아이콘 팩 (FontAwesome) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: hsl(222, 47%, 6%);
+            --card-bg: hsl(222, 40%, 11%);
+            --card-bg-trans: hsla(222, 40%, 11%, 0.7);
+            --card-border: hsla(222, 20%, 40%, 0.18);
+            --text-main: hsl(210, 20%, 96%);
+            --text-muted: hsl(215, 14%, 60%);
+            --color-primary: hsl(38, 92%, 50%);
+            --primary-glow: hsla(38, 92%, 50%, 0.35);
+            --color-success: hsl(160, 84%, 39%);
+            --color-danger: hsl(0, 84%, 60%);
+            --color-info: hsl(212, 100%, 61%);
+            
+            --font-display: 'Outfit', 'Space Grotesk', 'Noto Sans KR', sans-serif;
+            --font-mono: 'Space Grotesk', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-display);
+            overflow-x: hidden;
+            padding-bottom: 80px; /* 네비게이션 탭용 여유 */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 🎬 stagger 등장 애니메이션 */
+        @keyframes stagger-fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .stagger-item {
+            animation: stagger-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* ♿ prefers-reduced-motion 대응 */
+        @media (prefers-reduced-motion: reduce) {
+            .stagger-item, .nav-item i, .pos-progress-bar.pulse-glow {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+            }
+        }
+
+        /* 글래스모피즘 공통 카드 스타일 */
+        .glass-card {
+            background: var(--card-bg-trans);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 로그인 토큰 모달 */
+        #auth-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(3, 7, 18, 0.95);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-container {
+            width: 90%;
+            max-width: 360px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            margin: 16px 0;
+            text-align: center;
+            outline: none;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, hsl(38, 92%, 50%), hsl(38, 92%, 40%));
+            color: white;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .auth-btn:active {
+            opacity: 0.8;
+        }
+
+        /* 탭 구조 애니메이션 정의 */
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 탑 네비게이션 헤더 */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(3, 7, 18, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--color-primary), #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .engine-badge {
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-active {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--color-success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-inactive {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--color-danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* 일시정지 / 재개 버튼 */
+        .pause-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .pause-btn.paused {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--color-danger);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        /* 자산 요약 대시보드 카드 */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .summary-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .summary-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-family: var(--font-mono);
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        /* 3대 자산 벤토형 배치 그리드 */
+        .bento-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .bento-detail-item {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 10px 8px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+        }
+
+        .bento-detail-label {
+            color: var(--text-muted);
+            font-size: 0.62rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .bento-detail-val {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 700;
+            word-break: break-all;
+        }
+
+        /* 하단 네비게이션 탭 바 */
+        .nav-bar {
+            position: fixed;
+            bottom: 0; left: 0; width: 100%;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            width: 33.3%;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .nav-item.active {
+            color: var(--color-primary);
+        }
+
+        .nav-item i {
+            font-size: 1.25rem;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .nav-item.active i {
+            transform: scale(1.15) translateY(-2px);
+        }
+
+        /* 포지션 카드 목록 */
+        .position-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 14px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        /* 동적 손익 네온 글로우 테두리 스타일 */
+        .position-card.pos-profit {
+            border-color: rgba(16, 185, 129, 0.35) !important;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.12) !important;
+        }
+
+        .position-card.pos-loss {
+            border-color: rgba(239, 68, 68, 0.35) !important;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.12) !important;
+        }
+
+        .pos-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .pos-title {
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pos-market {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            background: rgba(255,255,255,0.04);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .pos-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        /* 국면 태그별 색상 배지 */
+        .badge-bull { background: rgba(16, 185, 129, 0.2); color: var(--color-success); }
+        .badge-bear { background: rgba(239, 68, 68, 0.2); color: var(--color-danger); }
+        .badge-bear-rebound { background: rgba(59, 130, 246, 0.2); color: var(--color-info); }
+        .badge-normal { background: rgba(255, 255, 255, 0.08); color: var(--text-main); }
+
+        .pos-pnl-group {
+            text-align: right;
+        }
+
+        .pos-pnl-amt {
+            font-family: var(--font-mono);
+            font-weight: 800;
+            font-size: 1.05rem;
+        }
+
+        .pos-pnl-pct {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .pos-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: 8px;
+            column-gap: 12px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .pos-grid div {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed rgba(255,255,255,0.03);
+            padding-bottom: 4px;
+        }
+
+        .pos-grid div span {
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+
+        /* 목표 손절비율 진척 미니 게이지 바 */
+        .pos-progress-box {
+            margin-bottom: 12px;
+        }
+        
+        .pos-progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .pos-progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .pos-progress-bar {
+            height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+            background: linear-gradient(90deg, var(--color-success) 0%, var(--color-primary) 50%, var(--color-danger) 100%);
+        }
+
+        .pos-progress-bar.pulse-glow {
+            animation: bar-pulse 1s infinite alternate;
+        }
+        @keyframes bar-pulse {
+            0% { filter: brightness(1); box-shadow: 0 0 4px var(--color-danger); }
+            100% { filter: brightness(1.3); box-shadow: 0 0 10px var(--color-danger); }
+        }
+
+        .pos-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 10px;
+        }
+
+        .btn-small-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--color-danger);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-small-danger:active {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-small-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* 레이더 감시 카드 */
+        .radar-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .radar-name-box {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .radar-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .radar-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        .radar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .radar-metrics {
+            text-align: right;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        .text-up { color: var(--color-success); }
+        .text-down { color: var(--color-danger); }
+        
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        /* 설정 입력 폼 스타일 */
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--color-primary) !important;
+            box-shadow: 0 0 0 3px var(--primary-glow) !important;
+        }
+
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        /* 토스트 알림 */
+        .toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid var(--color-primary);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 80%;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 토스트 노티파이 -->
+    <div id="toast-el" class="toast">설정이 변경되었습니다.</div>
+
+    <!-- 인증 토큰 입력 모달 -->
+    <div id="auth-modal" style="display: none;">
+        <div class="auth-container glass-card">
+            <h2 style="font-size: 1.3rem; font-weight: 800; color: var(--color-primary);"><i class="fa-solid fa-lock"></i> 코인 헌터 인증</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">모바일 API 접근을 위해 API 주소와 보안 토큰을 입력하십시오.</p>
+            <input type="text" id="api-url-input" class="auth-input" placeholder="API 주소 (예: https://api.haewoon.kr)" value="https://api.haewoon.kr">
+            <input type="password" id="token-input" class="auth-input" placeholder="보안 토큰 입력" style="margin-top: 0;">
+            <button onclick="saveToken()" class="auth-btn">연동 시작</button>
+        </div>
+    </div>
+
+    <!-- 탑 헤더 -->
+    <header>
+        <h1><i class="fa-solid fa-shield-halved" style="color: var(--color-primary);"></i> Coin Hunter</h1>
+        <div class="header-actions">
+            <button id="pause-toggle-btn" class="pause-btn" onclick="togglePause()">조회 중...</button>
+            <div id="engine-status" class="engine-badge badge-inactive">
+                <i class="fa-solid fa-circle"></i> <span>STOPPED</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 탭 1: 대시보드 -->
+    <div id="tab-dash" class="tab-content active">
+        <!-- 자산 요약 카드 -->
+        <div class="glass-card stagger-item" style="animation-delay: 20ms;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">총 순자산 (Total Assets)</span>
+                <span id="invest-mode" style="font-size: 0.7rem; font-weight: 700; color: var(--color-primary); border: 1px solid var(--color-primary); padding: 2px 6px; border-radius: 4px;">MOCK</span>
+            </div>
+            <div id="total-asset-val" style="font-size: 1.6rem; font-weight: 800; font-family: var(--font-mono); margin: 8px 0;">0 KRW</div>
+            
+            <!-- 3대 자산 지표 벤토형 그리드로 재배치 -->
+            <div class="bento-detail-grid">
+                <div class="bento-detail-item">
+                    <div class="bento-detail-label"><i class="fa-solid fa-cart-shopping" style="color:var(--color-info);"></i> 매수원금</div>
+                    <div id="total-buy-val" class="bento-detail-val">0원</div>
+                </div>
+                <div class="bento-detail-item">
+                    <div class="bento-detail-label"><i class="fa-solid fa-sack-dollar" style="color:var(--color-primary);"></i> 평가금액</div>
+                    <div id="total-eval-val" class="bento-detail-val">0원</div>
+                </div>
+                <div class="bento-detail-item">
+                    <div class="bento-detail-label"><i class="fa-solid fa-percent" style="color:var(--color-success);"></i> 평가손익</div>
+                    <div id="total-pnl-val" class="bento-detail-val" style="font-size:0.75rem;">0원 (0.00%)</div>
+                </div>
+            </div>
+
+            <div class="summary-grid" style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px;">
+                <div class="summary-item">
+                    <div class="summary-label">오늘 실현손익</div>
+                    <div id="today-pnl" class="summary-value">+0 KRW</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">가용 예수금</div>
+                    <div id="cash-balance" class="summary-value">0 KRW</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 보유 포지션 섹션 -->
+        <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 60ms;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-briefcase" style="color: var(--color-primary); margin-right: 6px;"></i> 보유 포지션</span>
+                <span id="pos-count" style="font-size: 0.8rem; color: var(--text-muted);">0개</span>
+            </h3>
+            <div id="positions-container">
+                <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem;">보유 중인 포지션이 없습니다.</div>
+            </div>
+        </div>
+
+        <!-- 실시간 감시 레이더 섹션 -->
+        <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 100ms;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px;">
+                <i class="fa-solid fa-crosshairs" style="color: var(--color-primary); margin-right: 6px;"></i> 실시간 감시 레이더
+            </h3>
+            <div id="radar-container">
+                <!-- 레이더 동적 렌더링 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 탭 2: 제어 설정 -->
+    <div id="tab-settings" class="tab-content">
+        <div class="glass-card stagger-item" style="animation-delay: 20ms;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <i class="fa-solid fa-sliders" style="color: var(--color-primary); margin-right: 6px;"></i> 퀀트 파라미터 조율
+            </h3>
+            <div id="settings-loading" style="text-align: center; padding: 20px; color: var(--text-muted);">설정 데이터를 로드하는 중...</div>
+            <form id="settings-form" style="display: none;" onsubmit="return false;">
+                <div class="form-group">
+                    <label>실시간 1회 진입 예산 (KRW)</label>
+                    <input type="number" id="param-budget" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>최대 매수 슬롯 개수</label>
+                    <input type="number" id="param-slots" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>로스컷 비율 (Loss Cut % - 입력값은 양수로 자동 음수 처리)</label>
+                    <input type="number" step="0.1" id="param-loss-cut" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>9시 경주마 1회 예산 (KRW)</label>
+                    <input type="number" id="param-pre9-budget" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>9시 경주마 최대 슬롯</label>
+                    <input type="number" id="param-pre9-slots" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>진입 가드 최고 RSI</label>
+                    <input type="number" step="0.1" id="param-rsi" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>진입 가드 최소 체결강도 (%)</label>
+                    <input type="number" id="param-vp" class="form-control">
+                </div>
+                
+                <button type="button" class="auth-btn" style="margin-top: 10px; width: 100%;" onclick="saveParams()">
+                    <i class="fa-solid fa-save"></i> 설정 파라미터 저장
+                </button>
+            </form>
+        </div>
+
+        <!-- 실시간 알림 규칙 관리 카드 -->
+        <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 60ms;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <i class="fa-solid fa-bell" style="color: var(--color-primary); margin-right: 6px;"></i> 실시간 알림 규칙 관리
+            </h3>
+            
+            <!-- 신규 알림 규칙 생성 폼 -->
+            <form onsubmit="return false;" style="margin-bottom: 16px;">
+                <div class="form-group">
+                    <label>알림 조건 유형</label>
+                    <select id="alert-type" class="form-control">
+                        <option value="PRICE_ABOVE">지정가 상향 돌파 (PRICE_ABOVE)</option>
+                        <option value="PRICE_BELOW">지정가 하향 이탈 (PRICE_BELOW)</option>
+                        <option value="DAILY_LOSS">일일 실현손실 임계 도달 (DAILY_LOSS)</option>
+                        <option value="SHADOW_READY">섀도우 전략 승격 완료 (SHADOW_READY)</option>
+                        <option value="ALPHA_NEGATIVE">주간 알파 음수 전환 (ALPHA_NEGATIVE)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="alert-market-group">
+                    <label>대상 마켓 (예: KRW-BTC)</label>
+                    <input type="text" id="alert-market" class="form-control" value="KRW-BTC">
+                </div>
+                <div class="form-group">
+                    <label>임계값 (가격 원화값 또는 손실률 % 등)</label>
+                    <input type="number" step="0.01" id="alert-threshold" class="form-control" placeholder="예: 100000000">
+                </div>
+                <button type="button" class="auth-btn" style="width: 100%;" onclick="addAlertRule()">
+                    <i class="fa-solid fa-plus"></i> 알림 규칙 추가
+                </button>
+            </form>
+
+            <!-- 등록된 알림 규칙 리스트 -->
+            <h4 style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">등록된 알림 목록</h4>
+            <div id="alerts-list-container" style="font-size: 0.78rem;">
+                <div style="text-align: center; padding: 10px; color: var(--text-muted);">등록된 알림 규칙이 없습니다.</div>
+            </div>
+        </div>
+
+        <!-- 락 제한 목록 카드 -->
+        <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 100ms;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span>🔒 매매 제외 락 코인 목록</span>
+                <span id="lock-count" style="font-size: 0.8rem; color: var(--text-muted);">0개</span>
+            </h3>
+            <div id="locks-container" style="font-size: 0.8rem;">
+                <div style="text-align: center; padding: 15px; color: var(--text-muted);">지정된 락 코인이 없습니다.</div>
+            </div>
+        </div>
+
+        <!-- API 연결 설정 카드 -->
+        <div class="glass-card stagger-item" style="margin-top: 0; animation-delay: 120ms;">
+            <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <i class="fa-solid fa-link" style="color: var(--color-primary); margin-right: 6px;"></i> API 연결 설정
+            </h3>
+            <div style="margin-bottom: 12px; text-align: left;">
+                <label style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 4px;">API 서버 주소</label>
+                <input type="text" id="setting-api-url" style="font-family: var(--font-mono); width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border); background: rgba(255,255,255,0.03); color: var(--text-main); outline: none;">
+            </div>
+            <div style="margin-bottom: 12px; text-align: left;">
+                <label style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 4px;">보안 토큰</label>
+                <input type="password" id="setting-api-token" style="font-family: var(--font-mono); width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border); background: rgba(255,255,255,0.03); color: var(--text-main); outline: none;" placeholder="보안 토큰 입력">
+            </div>
+            <button type="button" class="auth-btn" style="width: 100%;" onclick="saveConnectionSettings()">
+                <i class="fa-solid fa-save"></i> 연결 설정 저장 & 재연결
+            </button>
+        </div>
+    </div>
+
+    <!-- 탭 3: 체결로그 -->
+    <div id="tab-logs" class="tab-content">
+        <div class="glass-card stagger-item" style="animation-delay: 20ms;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                <i class="fa-solid fa-list-check" style="color: var(--color-primary); margin-right: 6px;"></i> 최근 50건 체결 원장
+            </h3>
+            <div id="trades-container">
+                <!-- 체결 이력 동적 렌더링 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 하단 네비게이션 탭 바 -->
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchTab('dash', this)">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>대시보드</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('settings', this)">
+            <i class="fa-solid fa-sliders"></i>
+            <span>제어설정</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('logs', this)">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>체결로그</span>
+        </div>
+    </div>
+
+    <script>
+        let apiToken = localStorage.getItem('mobile_api_token') || '';
+        let apiUrl = localStorage.getItem('mobile_api_url') || 'https://api.haewoon.kr';
+        let statusInterval = null;
+        let globalPaused = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 알림 드롭다운 변경에 따라 마켓 입력창 활성화 토글
+            document.getElementById('alert-type').addEventListener('change', (e) => {
+                const grp = document.getElementById('alert-market-group');
+                const mkt = document.getElementById('alert-market');
+                if (['DAILY_LOSS', 'SHADOW_READY', 'ALPHA_NEGATIVE'].includes(e.target.value)) {
+                    grp.style.display = 'none';
+                    mkt.value = 'ALL';
+                } else {
+                    grp.style.display = 'block';
+                    if (mkt.value === 'ALL') mkt.value = 'KRW-BTC';
+                }
+            });
+
+            if (!apiToken) {
+                document.getElementById('auth-modal').style.display = 'flex';
+                document.getElementById('api-url-input').value = apiUrl;
+            } else {
+                startPolling();
+            }
+        });
+
+        function saveToken() {
+            const urlVal = document.getElementById('api-url-input').value.trim();
+            const tokenVal = document.getElementById('token-input').value.trim();
+            if (urlVal && tokenVal) {
+                apiUrl = urlVal.replace(/\/$/, "");
+                apiToken = tokenVal;
+                localStorage.setItem('mobile_api_url', apiUrl);
+                localStorage.setItem('mobile_api_token', apiToken);
+                document.getElementById('auth-modal').style.display = 'none';
+                startPolling();
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-el');
+            toast.innerText = msg;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // T2-2 부드러운 탭 페이드 전환 JS 튜닝
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(c => {
+                c.classList.remove('active');
+                c.style.display = 'none';
+            });
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            
+            const targetContent = document.getElementById('tab-' + tabId);
+            targetContent.style.display = 'block';
+            
+            // 리플로우 유도
+            targetContent.offsetHeight;
+            
+            setTimeout(() => {
+                targetContent.classList.add('active');
+            }, 10);
+            
+            el.classList.add('active');
+
+            if (tabId === 'settings') {
+                loadSettingsForm();
+                loadAlertRules();
+            }
+        }
+
+        function startPolling() {
+            fetchData();
+            statusInterval = setInterval(fetchData, 10000); // 10초 폴링
+        }
+
+        async function apiRequest(endpoint, options = {}) {
+            const defaultHeaders = {
+                'Authorization': 'Bearer ' + apiToken,
+                'Content-Type': 'application/json'
+            };
+            try {
+                const url = endpoint.startsWith('http') ? endpoint : (apiUrl + endpoint);
+                const res = await fetch(url, {
+                    ...options,
+                    headers: { ...defaultHeaders, ...options.headers }
+                });
+                if (res.status === 401) {
+                    localStorage.removeItem('mobile_api_token');
+                    apiToken = '';
+                    document.getElementById('auth-modal').style.display = 'flex';
+                    clearInterval(statusInterval);
+                    return null;
+                }
+                if (!res.ok) {
+                    const errBody = await res.json().catch(() => ({detail: "에러 발생"}));
+                    throw new Error(errBody.detail || '요청 실패');
+                }
+                return await res.json();
+            } catch (err) {
+                console.error(err);
+                showToast(err.message);
+                return null;
+            }
+        }
+
+        async function fetchData() {
+            const statusData = await apiRequest('/api/status');
+            if (statusData) {
+                updateStatusUI(statusData);
+            }
+            
+            const positions = await apiRequest('/api/positions');
+            if (positions) {
+                updatePositionsUI(positions, statusData);
+            }
+
+            const radar = await apiRequest('/api/radar');
+            if (radar) {
+                updateRadarUI(radar);
+            }
+
+            const trades = await apiRequest('/api/trades');
+            if (trades) {
+                updateTradesUI(trades);
+            }
+        }
+
+        function updateStatusUI(data) {
+            // 엔진 하트비트 갱신
+            const statusBadge = document.getElementById('engine-status');
+            if (data.engine_active) {
+                statusBadge.className = 'engine-badge badge-active';
+                statusBadge.querySelector('span').innerText = 'RUNNING';
+            } else {
+                statusBadge.className = 'engine-badge badge-inactive';
+                statusBadge.querySelector('span').innerText = 'STOPPED';
+            }
+
+            // 일시정지 상태 바인딩
+            const pauseBtn = document.getElementById('pause-toggle-btn');
+            globalPaused = data.is_paused;
+            if (globalPaused) {
+                pauseBtn.innerText = '재개 (RESUME)';
+                pauseBtn.className = 'pause-btn paused';
+            } else {
+                pauseBtn.innerText = '일시정지 (PAUSE)';
+                pauseBtn.className = 'pause-btn';
+            }
+
+            // 요약 지표 업데이트
+            document.getElementById('invest-mode').innerText = data.mode;
+            
+            const totalAsset = data.portfolio_eval_funds + data.cash_balance;
+            document.getElementById('total-asset-val').innerText = totalAsset.toLocaleString('ko-KR') + ' KRW';
+
+            // 오늘 실현손익
+            const todayPnlEl = document.getElementById('today-pnl');
+            todayPnlEl.innerText = (data.today_realized_pnl >= 0 ? '+' : '') + data.today_realized_pnl.toLocaleString('ko-KR') + ' KRW';
+            todayPnlEl.className = 'summary-value ' + (data.today_realized_pnl >= 0 ? 'text-up' : 'text-down');
+
+            document.getElementById('cash-balance').innerText = data.cash_balance.toLocaleString('ko-KR') + ' KRW';
+            document.getElementById('pos-count').innerText = data.portfolio_count + '개';
+
+            // 락 코인 개수 및 리스트 바인딩
+            const lockedList = data.locked_coins || [];
+            document.getElementById('lock-count').innerText = lockedList.length + '개';
+            
+            const locksContainer = document.getElementById('locks-container');
+            if (lockedList.length === 0) {
+                locksContainer.innerHTML = '<div style="text-align: center; padding: 10px; color: var(--text-muted);">지정된 락 코인이 없습니다.</div>';
+            } else {
+                let lockHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
+                lockedList.forEach((item, idx) => {
+                    lockHtml += `
+                        <div class="stagger-item" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:8px; animation-delay:${idx * 30}ms;">
+                            <div>
+                                <span style="font-weight:700;">${item.korean_name}</span>
+                                <span style="color:var(--text-muted); font-size:0.7rem; font-family:var(--font-mono); margin-left:4px;">${item.market}</span>
+                            </div>
+                            <button class="btn-small-action" onclick="unlockCoin('${item.market}')">해제</button>
+                        </div>
+                    `;
+                });
+                lockHtml += '</div>';
+                locksContainer.innerHTML = lockHtml;
+            }
+
+            // 설정값 글로벌 보관
+            window.hunterConfig = data;
+        }
+
+        function updatePositionsUI(list, statusData) {
+            const container = document.getElementById('positions-container');
+            
+            let totalBuy = 0.0;
+            let totalEval = 0.0;
+
+            if (list.length === 0) {
+                container.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem;">보유 중인 포지션이 없습니다.</div>`;
+                document.getElementById('total-buy-val').innerText = '0원';
+                document.getElementById('total-eval-val').innerText = '0원';
+                document.getElementById('total-pnl-val').innerText = '0원 (0.00%)';
+                document.getElementById('total-pnl-val').className = 'bento-detail-val';
+                return;
+            }
+
+            let html = '';
+            list.forEach((p, idx) => {
+                const buySpent = p.buy_price * p.volume;
+                const evalVal = p.current_price * p.volume;
+                totalBuy += buySpent;
+                totalEval += evalVal;
+
+                const pnlAmt = evalVal - buySpent;
+                const isProfit = pnlAmt >= 0;
+                
+                const cardClass = isProfit ? 'position-card pos-profit' : 'position-card pos-loss';
+                const pnlClass = isProfit ? 'text-up' : 'text-down';
+                const profitSign = isProfit ? '+' : '';
+
+                // 국면 태그에 따른 배지 스타일
+                let badgeClass = 'badge-normal';
+                if (p.entry_tag === 'BULL') badgeClass = 'badge-bull';
+                else if (p.entry_tag === 'BEAR') badgeClass = 'badge-bear';
+                else if (p.entry_tag === 'BEAR_REBOUND') badgeClass = 'badge-bear-rebound';
+
+                // 손절선 도달 진척도 바 연산
+                const currentLossRate = p.profit_rate;
+                const targetLossLimit = statusData ? parseFloat(statusData.loss_cut_rate) : -2.0; // 설정된 로스컷 한계(%)
+                
+                // 손절 한계선에 얼마나 다가섰는지 게이지화 (0%에서 로스컷 한계까지)
+                let pctWidth = 0;
+                if (currentLossRate < 0) {
+                    pctWidth = Math.min(100, (currentLossRate / targetLossLimit) * 100);
+                }
+                const progressPulse = pctWidth >= 85 ? 'pulse-glow' : '';
+
+                html += `
+                    <div class="${cardClass} stagger-item" style="animation-delay:${idx * 40}ms;">
+                        <div class="pos-header">
+                            <div class="pos-title">
+                                <span style="font-size:1.05rem;">${p.korean_name}</span>
+                                <span class="pos-market">${p.market.replace('KRW-', '')}</span>
+                                <span class="pos-badge ${badgeClass}">${p.entry_tag}</span>
+                                ${p.is_watered ? '<span style="font-size:0.6rem;background:rgba(59,130,246,0.15);color:var(--color-info);padding:2px 4px;border-radius:4px;border:1px solid rgba(59,130,246,0.3)">물타기</span>' : ''}
+                            </div>
+                            <div class="pos-pnl-group">
+                                <div class="${pnlClass} pos-pnl-amt">${profitSign}${pnlAmt.toLocaleString('ko-KR', {maximumFractionDigits:0})}원</div>
+                                <div class="${pnlClass} pos-pnl-pct">${profitSign}${p.profit_rate.toFixed(2)}%</div>
+                            </div>
+                        </div>
+                        <div class="pos-grid">
+                            <div>평단가 <span>${p.buy_price.toLocaleString('ko-KR')}</span></div>
+                            <div>현재가 <span>${p.current_price.toLocaleString('ko-KR')}</span></div>
+                            <div>매수금액 <span>${buySpent.toLocaleString('ko-KR', {maximumFractionDigits:0})}원</span></div>
+                            <div>평가금액 <span>${evalVal.toLocaleString('ko-KR', {maximumFractionDigits:0})}원</span></div>
+                            <div>보유수량 <span>${p.volume.toFixed(4)}</span></div>
+                            <div>분할매도 <span>${p.part_sell_stage}단계 (유예)</span></div>
+                        </div>
+                        
+                        <!-- 손절 한계선 진척도 게이지 바 추가 (그라데이션 및 펄스 적용) -->
+                        <div class="pos-progress-box">
+                            <div class="pos-progress-label">
+                                <span>손절 한계선 진척도 (${currentLossRate.toFixed(2)}% / ${targetLossLimit.toFixed(1)}%)</span>
+                                <span style="font-family:var(--font-mono); font-weight:700;">${pctWidth.toFixed(0)}%</span>
+                            </div>
+                            <div class="pos-progress-bar-bg">
+                                <div class="pos-progress-bar ${progressPulse}" style="width: ${pctWidth}%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="pos-actions">
+                            <button class="btn-small-action" onclick="lockCoin('${p.market}')">즉시 락</button>
+                            <button class="btn-small-danger" onclick="triggerManualSell('${p.market}', '${p.korean_name}')">긴급 매도</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+            // 상단 자산 세부 지표 실시간 바인딩
+            document.getElementById('total-buy-val').innerText = totalBuy.toLocaleString('ko-KR', {maximumFractionDigits:0}) + '원';
+            document.getElementById('total-eval-val').innerText = totalEval.toLocaleString('ko-KR', {maximumFractionDigits:0}) + '원';
+            
+            const totalPnl = totalEval - totalBuy;
+            const totalPnlPct = totalBuy > 0 ? (totalPnl / totalBuy) * 100.0 : 0.0;
+            const isTotalProfit = totalPnl >= 0;
+            const totalSign = isTotalProfit ? '+' : '';
+            const totalPnlClass = isTotalProfit ? 'bento-detail-val text-up' : 'bento-detail-val text-down';
+            
+            document.getElementById('total-pnl-val').innerText = `${totalSign}${totalPnl.toLocaleString('ko-KR', {maximumFractionDigits:0})}원 (${totalSign}${totalPnlPct.toFixed(2)}%)`;
+            document.getElementById('total-pnl-val').className = totalPnlClass;
+        }
+
+        function updateRadarUI(list) {
+            const container = document.getElementById('radar-container');
+            if (list.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 15px; color: var(--text-muted); font-size: 0.8rem;">레이더 데이터가 없습니다.</div>';
+                return;
+            }
+
+            let html = '';
+            list.forEach((r, idx) => {
+                let badgeStyle = 'background:rgba(255,255,255,0.05);color:var(--text-muted);';
+                if (r.state === 'BUY_SIGNAL') {
+                    badgeStyle = 'background:rgba(16,185,129,0.15);color:var(--color-success);border:1px solid rgba(16,185,129,0.2);';
+                } else if (r.state === 'PRE_ANALYSIS') {
+                    badgeStyle = 'background:rgba(245,158,11,0.15);color:var(--color-primary);border:1px solid rgba(245,158,11,0.2);';
+                }
+
+                // RSI가 과열/과매도 일 때 경고 텍스트 색 변경
+                const rsiColor = r.rsi >= 70 ? 'var(--color-danger)' : (r.rsi <= 30 ? 'var(--color-info)' : 'var(--text-main)');
+
+                html += `
+                    <div class="radar-item stagger-item" style="animation-delay:${idx * 30}ms;">
+                        <div class="radar-name-box">
+                            <span class="radar-name">${r.korean_name} <span style="font-size:0.65rem;color:var(--text-muted);font-family:var(--font-mono);">${r.market.replace('KRW-', '')}</span></span>
+                            <span class="radar-badge" style="${badgeStyle}">${r.state}</span>
+                        </div>
+                        <div class="radar-right">
+                            <div class="radar-metrics">
+                                <div>현재가: ${r.price.toLocaleString('ko-KR')}원 (<span class="${r.change_rate >= 0 ? 'text-up' : 'text-down'}">${r.change_rate >= 0 ? '+' : ''}${r.change_rate.toFixed(2)}%</span>)</div>
+                                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">RSI: <span style="color: ${rsiColor}; font-weight:700;">${r.rsi.toFixed(1)}</span> · 체결강도: <span style="color:var(--text-main); font-weight:700;">${r.volume_power.toFixed(0)}%</span></div>
+                            </div>
+                            <button class="btn-small-action" style="padding:4px 8px; font-size:0.7rem;" onclick="lockCoin('${r.market}')">락</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function updateTradesUI(list) {
+            const container = document.getElementById('trades-container');
+            if (list.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">최근 체결 이력이 없습니다.</div>';
+                return;
+            }
+
+            let html = '';
+            list.forEach((t, idx) => {
+                const parts = t.timestamp.split('T');
+                const dateOnly = parts[0];
+                const timeOnly = parts[1] ? parts[1].substring(0, 8) : '';
+                const isBuy = t.side === 'BUY';
+                
+                let sideEmoji = '🟢';
+                let sideClass = 'text-up';
+                let sideLabel = '매수';
+                let leftBorderColor = 'var(--color-info)';
+                
+                if (!isBuy) {
+                    const isProfit = t.profit_rate >= 0;
+                    sideEmoji = isProfit ? '🔴' : '🔵';
+                    sideClass = isProfit ? 'text-up' : 'text-down';
+                    sideLabel = isProfit ? '수익 익절' : '손실 손절';
+                    leftBorderColor = isProfit ? 'var(--color-success)' : 'var(--color-danger)';
+                    
+                    // 청산 라벨 한글 매핑 보정
+                    if (t.side === 'PART_SELL_0') {
+                        sideLabel = '휩소 부분손절 (50%)';
+                        leftBorderColor = 'var(--color-danger)';
+                    } else if (t.side === 'PART_SELL_1' || t.side === 'PART_SELL_2') {
+                        sideLabel = '하프 익절';
+                        leftBorderColor = 'var(--color-success)';
+                    } else if (t.side === 'MANUAL_SELL') {
+                        sideLabel = '수동 청산';
+                        leftBorderColor = 'var(--text-muted)';
+                    }
+                }
+
+                const profitSign = t.profit_rate >= 0 ? '+' : '';
+
+                html += `
+                    <div class="radar-item stagger-item" style="border-left: 3px solid ${leftBorderColor}; padding-left: 8px; margin-bottom: 4px; background: rgba(255,255,255,0.01); animation-delay:${idx * 30}ms;">
+                        <div>
+                            <div style="font-weight:700;font-size:0.85rem;">${sideEmoji} ${t.korean_name} <span style="font-size:0.65rem; color:var(--text-muted); font-weight:normal;">${t.market}</span></div>
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">${dateOnly} ${timeOnly} · <span style="color:var(--text-main); font-weight:600;">${sideLabel}</span></div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:600;font-size:0.8rem;font-family:var(--font-mono);">${t.side} · ${t.price.toLocaleString('ko-KR')}원</div>
+                            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">
+                                ${!isBuy && t.profit_rate !== null ? `<span class="${sideClass}" style="font-weight:700;">${t.realized_pnl >= 0 ? '+' : ''}${t.realized_pnl.toLocaleString('ko-KR', {maximumFractionDigits:0})}원 (${profitSign}${t.profit_rate.toFixed(2)}%)</span> · ` : ''}
+                                <span style="font-weight:600; color:var(--text-main);">${t.funds.toLocaleString('ko-KR', {maximumFractionDigits:0})}원</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function loadSettingsForm() {
+            // API 연결 설정 바인딩
+            document.getElementById('setting-api-url').value = apiUrl;
+            document.getElementById('setting-api-token').value = apiToken;
+
+            if (window.hunterConfig) {
+                const cfg = window.hunterConfig;
+                document.getElementById('param-budget').value = cfg.budget_per_trade;
+                document.getElementById('param-slots').value = cfg.max_slots;
+                document.getElementById('param-loss-cut').value = Math.abs(cfg.loss_cut_rate);
+                document.getElementById('param-pre9-budget').value = cfg.pre_9am_budget;
+                document.getElementById('param-pre9-slots').value = cfg.pre_9am_max_slots;
+                document.getElementById('param-rsi').value = cfg.max_buy_rsi;
+                document.getElementById('param-vp').value = cfg.min_buy_vp;
+                
+                document.getElementById('settings-loading').style.display = 'none';
+                document.getElementById('settings-form').style.display = 'block';
+            }
+        }
+
+        // =====================================================================
+        // 🎮 제어 호출 스크립트 (M2 인터랙션)
+        // =====================================================================
+
+        async function togglePause() {
+            const api = globalPaused ? '/api/resume' : '/api/pause';
+            const res = await apiRequest(api, { method: 'POST' });
+            if (res && res.status === 'success') {
+                showToast(res.message);
+                fetchData();
+            }
+        }
+
+        async function saveParams() {
+            const payload = {
+                loss_cut_rate: -Math.abs(parseFloat(document.getElementById('param-loss-cut').value)),
+                budget_per_trade: parseFloat(document.getElementById('param-budget').value),
+                max_slots: parseInt(document.getElementById('param-slots').value),
+                pre_9am_budget: parseFloat(document.getElementById('param-pre9-budget').value),
+                pre_9am_max_slots: parseInt(document.getElementById('param-pre9-slots').value),
+                max_buy_rsi: parseFloat(document.getElementById('param-rsi').value),
+                min_buy_vp: parseFloat(document.getElementById('param-vp').value)
+            };
+
+            const res = await apiRequest('/api/params', {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+
+            if (res && res.status === 'success') {
+                showToast(res.message);
+                fetchData();
+            }
+        }
+
+        async function lockCoin(market) {
+            if (confirm(`${market} 코인을 자동매매에서 제외(LOCK)하시겠습니까?`)) {
+                const res = await apiRequest('/api/lock', {
+                    method: 'POST',
+                    body: JSON.stringify({ market: market })
+                });
+                if (res && res.status === 'success') {
+                    showToast(res.message);
+                    fetchData();
+                }
+            }
+        }
+
+        async function unlockCoin(market) {
+            if (confirm(`${market} 코인 락을 해제하시겠습니까?`)) {
+                const res = await apiRequest('/api/unlock', {
+                    method: 'POST',
+                    body: JSON.stringify({ market: market })
+                });
+                if (res && res.status === 'success') {
+                    showToast(res.message);
+                    fetchData();
+                }
+            }
+        }
+
+        async function triggerManualSell(market, name) {
+            if (!confirm(`🚨 [긴급 수동 청산 경고]\n${name}(${market}) 코인을 현재 시장가로 즉시 전량 청산하시겠습니까?`)) {
+                return;
+            }
+
+            // 1단계: 청산 요청 토큰 획득
+            const reqRes = await apiRequest('/api/sell/request', {
+                method: 'POST',
+                body: JSON.stringify({ market: market })
+            });
+
+            if (reqRes && reqRes.status === 'success' && reqRes.confirm_token) {
+                const token = reqRes.confirm_token;
+                // 2단계: 최종 승인 다이얼로그 (60초 유효)
+                if (confirm(`[최종 매도 확인]\n60초 이내에 승인하지 않으면 취소됩니다.\n정말로 매도를 집행할까요?`)) {
+                    const confirmRes = await apiRequest('/api/sell/confirm', {
+                        method: 'POST',
+                        body: JSON.stringify({ confirm_token: token })
+                    });
+                    if (confirmRes && confirmRes.status === 'success') {
+                        alert(`매도 완료!\n체결 평단가: ${confirmRes.executed_price.toLocaleString()}원\n수익률: ${confirmRes.profit_rate.toFixed(2)}%`);
+                        fetchData();
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // 🔔 알림 규칙 추가 및 관리 (M3 인터랙션)
+        // =====================================================================
+
+        async function loadAlertRules() {
+            const list = await apiRequest('/api/alerts');
+            const container = document.getElementById('alerts-list-container');
+            if (!list || list.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 10px; color: var(--text-muted);">등록된 알림 규칙이 없습니다.</div>';
+                return;
+            }
+
+            let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+            list.forEach((a, idx) => {
+                html += `
+                    <div class="stagger-item" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:8px; animation-delay:${idx * 30}ms;">
+                        <div>
+                            <span style="font-weight:700; color:var(--color-primary);">${a.rule_type}</span>
+                            <span style="color:var(--text-muted); font-size:0.7rem; font-family:var(--font-mono); margin-left:4px;">${a.market}</span>
+                            <span style="font-weight:600; margin-left:6px;">${a.threshold.toLocaleString()}</span>
+                        </div>
+                        <button class="btn-small-action" style="padding:4px 8px; font-size:0.7rem; color:var(--color-danger); border-color:rgba(239,68,68,0.2);" onclick="deleteAlertRule(${a.id})">삭제</button>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        async function addAlertRule() {
+            const type = document.getElementById('alert-type').value;
+            const market = document.getElementById('alert-market').value.trim().toUpperCase();
+            const threshold = parseFloat(document.getElementById('alert-threshold').value);
+
+            if (isNaN(threshold)) {
+                alert('올바른 임계값을 입력해 주십시오.');
+                return;
+            }
+
+            const res = await apiRequest('/api/alerts', {
+                method: 'POST',
+                body: JSON.stringify({
+                    rule_type: type,
+                    market: market,
+                    threshold: threshold
+                })
+            });
+
+            if (res && res.status === 'success') {
+                showToast(res.message);
+                loadAlertRules();
+                // 입력창 리셋
+                document.getElementById('alert-threshold').value = '';
+            }
+        }
+
+        async function deleteAlertRule(id) {
+            if (confirm('이 알림 규칙을 삭제하시겠습니까?')) {
+                const res = await apiRequest('/api/alerts/' + id, {
+                    method: 'DELETE'
+                });
+                if (res && res.status === 'success') {
+                    showToast(res.message);
+                    loadAlertRules();
+                }
+            }
+        }
+
+        async function saveConnectionSettings() {
+            const urlVal = document.getElementById('setting-api-url').value.trim();
+            const tokenVal = document.getElementById('setting-api-token').value.trim();
+            if (urlVal && tokenVal) {
+                apiUrl = urlVal.replace(/\/$/, "");
+                apiToken = tokenVal;
+                localStorage.setItem('mobile_api_url', apiUrl);
+                localStorage.setItem('mobile_api_token', apiToken);
+                showToast("연결 설정이 업데이트되었습니다. 데이터를 다시 로드합니다.");
+                clearInterval(statusInterval);
+                startPolling();
+            } else {
+                alert("API 주소와 토큰을 모두 입력해야 합니다.");
+            }
+        }
+    </script>
+</body>
+</html>
