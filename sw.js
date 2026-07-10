@@ -1,8 +1,11 @@
-const CACHE_NAME = 'coin-hunter-v2';
+const CACHE_NAME = 'coin-hunter-v3';
 const ASSETS_TO_CACHE = [
   '/',
-  '/manifest.json'
+  '/manifest.json',
+  'https://cdn.jsdelivr.net/npm/chart.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
+
 
 // 서비스 워커 설치 및 정적 자산 캐싱
 self.addEventListener('install', (event) => {
